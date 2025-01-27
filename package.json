@@ -5,13 +5,10 @@
     "main": "app.js",
     "scripts": {
         "start": "parcel index.html --open",
-        "build": "parcel build ./public/js/app.js"
+        "build": "parcel build ./dist/js/app.js"
     },
     "dependencies": {
         "parcel": "^2.13.3"
-    },
-    "devDependencies": {
-        "parcel-bundler": "^1.6.1"
     },
     "keywords": []
 }
