@@ -10,14 +10,14 @@
     <div class="container">
       <h1>Google Forms Clone</h1>
 
+      <div class="form-container" id="fields-container">
         <h2>Create Form</h2>
-        <div class="form-container" id="fields-container">
-          <!-- Fields will be dynamically added here -->
-        </div>
-        <div class="form-container">
-          <button id="add-field">Add Field</button>
-          <button id="save-form">Save Form</button>
-        </div>
+        <!-- Fields will be dynamically added here -->
+      </div>
+      <div class="form-container">
+        <button id="add-field">Add Field</button>
+        <button id="save-form">Save Form</button>
+      </div>
 
       <div class="form-container" id="saved-forms">
         <h2>Saved Forms</h2>
@@ -26,7 +26,7 @@
         </ul>
       </div>
 
-      <div class="preview-container" id="form-preview">
+      <div class="preview-container" id="form-preview" style="display: none">
         <h2>Form Preview</h2>
         <div id="preview-container">
           <!-- Preview of the form will be displayed here -->

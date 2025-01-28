@@ -7,15 +7,24 @@ const $ca89da83071998c6$var$savedFormsList = document.getElementById("saved-form
 const $ca89da83071998c6$var$formPreviewSection = document.getElementById("form-preview");
 const $ca89da83071998c6$var$previewContainer = document.getElementById("preview-container");
 const $ca89da83071998c6$var$backToBuilderButton = document.getElementById("back-to-builder");
-let $ca89da83071998c6$var$editingFormId = null; // Track the form being edited
+// DOM Elements for Responses
+const $ca89da83071998c6$var$formResponseSection = document.getElementById("form-responses");
+const $ca89da83071998c6$var$responseContainer = document.getElementById("response-container");
+// Centralized storage for current form responses
+let $ca89da83071998c6$var$currentFormResponse = {};
 // Store forms in localStorage
 const $ca89da83071998c6$var$localStorageKey = "forms";
 const $ca89da83071998c6$var$getFormsFromStorage = ()=>JSON.parse(localStorage.getItem($ca89da83071998c6$var$localStorageKey) || "[]");
 const $ca89da83071998c6$var$saveFormsToStorage = (forms)=>localStorage.setItem($ca89da83071998c6$var$localStorageKey, JSON.stringify(forms));
+// Get and Save Responses from Storage
+const $ca89da83071998c6$var$localStorageResponseKey = "formResponses";
+const $ca89da83071998c6$var$getResponsesFromStorage = ()=>JSON.parse(localStorage.getItem($ca89da83071998c6$var$localStorageResponseKey) || "[]");
+const $ca89da83071998c6$var$saveResponsesToStorage = (responses)=>localStorage.setItem($ca89da83071998c6$var$localStorageResponseKey, JSON.stringify(responses));
 // Generate unique IDs
 const $ca89da83071998c6$var$generateId = ()=>"_" + Math.random().toString(36).substr(2, 9);
 // Current form data
 let $ca89da83071998c6$var$currentFields = [];
+let $ca89da83071998c6$var$editingFormId = null; // Track the form being edited
 // Add a new field
 const $ca89da83071998c6$var$addField = ()=>{
     const fieldId = $ca89da83071998c6$var$generateId();
@@ -171,19 +180,30 @@ const $ca89da83071998c6$var$deleteField = (id)=>{
 };
 // Save form
 const $ca89da83071998c6$var$saveForm = ()=>{
-    const formName = prompt("Enter a name for this form:");
-    if (!formName) return;
-    const newForm = {
-        id: $ca89da83071998c6$var$generateId(),
-        name: formName,
-        fields: $ca89da83071998c6$var$currentFields
-    };
-    const forms = $ca89da83071998c6$var$getFormsFromStorage();
-    forms.push(newForm);
-    $ca89da83071998c6$var$saveFormsToStorage(forms);
-    alert("Form saved!");
+    if ($ca89da83071998c6$var$editingFormId) {
+        const forms = $ca89da83071998c6$var$getFormsFromStorage();
+        const formIndex = forms.findIndex((form)=>form.id === $ca89da83071998c6$var$editingFormId);
+        if (formIndex !== -1) {
+            forms[formIndex].fields = $ca89da83071998c6$var$currentFields; // Update the fields of the form
+            $ca89da83071998c6$var$saveFormsToStorage(forms);
+            alert("Form updated!");
+        }
+    } else {
+        const formName = prompt("Enter a name for this form:");
+        if (!formName) return;
+        const newForm = {
+            id: $ca89da83071998c6$var$generateId(),
+            name: formName,
+            fields: $ca89da83071998c6$var$currentFields
+        };
+        const forms = $ca89da83071998c6$var$getFormsFromStorage();
+        forms.push(newForm);
+        $ca89da83071998c6$var$saveFormsToStorage(forms);
+        alert("Form saved!");
+    }
     $ca89da83071998c6$var$renderSavedForms();
     $ca89da83071998c6$var$currentFields = [];
+    $ca89da83071998c6$var$editingFormId = null; // Reset editing form
     $ca89da83071998c6$var$renderFields();
 };
 // Render saved forms
@@ -198,6 +218,8 @@ const $ca89da83071998c6$var$renderSavedForms = ()=>{
           <button data-id="${form.id}" class="preview-form">Preview</button>
           <button data-id="${form.id}" class="edit-form">Edit</button>
           <button data-id="${form.id}" class="delete-form">Delete</button>
+          <button data-id="${form.id}" class="submit-form-response">Submit Response</button>
+          <button data-id="${form.id}" class="view-response">View Response</button>
         </div>
       `;
         $ca89da83071998c6$var$savedFormsList.appendChild(formElement);
@@ -211,6 +233,11 @@ const $ca89da83071998c6$var$renderSavedForms = ()=>{
     });
     const editButtons = document.querySelectorAll(".edit-form");
     editButtons.forEach((button)=>button.addEventListener("click", (e)=>$ca89da83071998c6$var$editForm(e.target.dataset.id)));
+    const submitResponseButtons = document.querySelectorAll(".submit-form-response");
+    submitResponseButtons.forEach((button)=>button.addEventListener("click", (e)=>$ca89da83071998c6$var$renderFormForSubmission(e.target.dataset.id)));
+    // Attach event listeners
+    const viewButtons = document.querySelectorAll(".view-response");
+    viewButtons.forEach((button)=>button.addEventListener("click", (e)=>$ca89da83071998c6$var$viewResponses(e.target.dataset.id)));
 };
 // Preview a form
 const $ca89da83071998c6$var$previewForm = (id)=>{
@@ -222,7 +249,7 @@ const $ca89da83071998c6$var$previewForm = (id)=>{
         var _a, _b, _c;
         const fieldElement = document.createElement("div");
         fieldElement.className = "field-preview";
-        fieldElement.innerHTML = `<label>${field.label} : </label>`;
+        fieldElement.innerHTML = `<label>${field.label} ${field.required ? '<span style="color: red;">*</span>' : ""} : </label>`;
         if (field.type === "text") fieldElement.innerHTML += `<input type="text" disabled>`;
         else if (field.type === "radio" || field.type === "checkbox") (_a = field.options) === null || _a === void 0 || _a.forEach((option)=>{
             fieldElement.innerHTML += `<input type="${field.type}" disabled> ${option}`;
@@ -264,28 +291,183 @@ const $ca89da83071998c6$var$editForm = (id)=>{
         $ca89da83071998c6$var$renderFields();
     }
 };
-// Save updated form
-const $ca89da83071998c6$var$saveUpdatedForm = ()=>{
-    if ($ca89da83071998c6$var$editingFormId) {
-        const forms = $ca89da83071998c6$var$getFormsFromStorage();
-        const formIndex = forms.findIndex((form)=>form.id === $ca89da83071998c6$var$editingFormId);
-        if (formIndex !== -1) {
-            forms[formIndex].fields = $ca89da83071998c6$var$currentFields; // Update the fields of the form
-            $ca89da83071998c6$var$saveFormsToStorage(forms);
-            alert("Form updated!");
-            $ca89da83071998c6$var$renderSavedForms();
-            $ca89da83071998c6$var$currentFields = [];
-            $ca89da83071998c6$var$editingFormId = null; // Reset editing form
-            $ca89da83071998c6$var$renderFields();
-        }
-    }
-};
 // Event Listeners
 $ca89da83071998c6$var$addFieldButton.addEventListener("click", $ca89da83071998c6$var$addField);
 $ca89da83071998c6$var$saveFormButton.addEventListener("click", $ca89da83071998c6$var$saveForm);
 $ca89da83071998c6$var$backToBuilderButton.addEventListener("click", $ca89da83071998c6$var$backToFormBuilder);
 // Initial Render
 $ca89da83071998c6$var$renderSavedForms();
+// Add change event listener to update responses dynamically
+const $ca89da83071998c6$var$handleInputChange = (event)=>{
+    const target = event.target;
+    if (!target) return;
+    if (target.type === "checkbox") {
+        const fieldId = target.name; // Group by name for checkboxes
+        if (!Array.isArray($ca89da83071998c6$var$currentFormResponse[fieldId])) $ca89da83071998c6$var$currentFormResponse[fieldId] = [];
+        const values = $ca89da83071998c6$var$currentFormResponse[fieldId];
+        if (target.checked) values.push(target.value);
+        else $ca89da83071998c6$var$currentFormResponse[fieldId] = values.filter((v)=>v !== target.value);
+    } else if (target.type === "radio") $ca89da83071998c6$var$currentFormResponse[target.name] = target.value; // Use name for radio groups
+    else $ca89da83071998c6$var$currentFormResponse[target.id] = target.value; // Use ID for text and dropdown
+};
+// Render Form for Submission
+const $ca89da83071998c6$var$renderFormForSubmission = (id)=>{
+    const forms = $ca89da83071998c6$var$getFormsFromStorage();
+    const form = forms.find((form)=>form.id === id);
+    $ca89da83071998c6$var$previewContainer.innerHTML = "";
+    const formElement = document.createElement("form");
+    formElement.id = "dynamic-form";
+    if (form) {
+        form.fields.forEach((field)=>{
+            var _a, _b, _c;
+            const fieldWrapper = document.createElement("div");
+            fieldWrapper.className = "field";
+            // Create field label
+            const label = document.createElement("label");
+            label.textContent = field.label;
+            fieldWrapper.appendChild(label);
+            // Create field based on type
+            let inputElement;
+            if (field.type === "text") {
+                inputElement = document.createElement("input");
+                inputElement.type = "text";
+                inputElement.addEventListener("input", $ca89da83071998c6$var$handleInputChange);
+            } else if (field.type === "checkbox") {
+                inputElement = document.createElement("div");
+                (_a = field.options) === null || _a === void 0 || _a.forEach((option)=>{
+                    const optionWrapper = document.createElement("div");
+                    const input = document.createElement("input");
+                    input.type = "checkbox";
+                    input.name = field.id; // Group by field ID
+                    input.value = option;
+                    input.addEventListener("change", $ca89da83071998c6$var$handleInputChange);
+                    const optionLabel = document.createElement("label");
+                    optionLabel.textContent = option;
+                    optionWrapper.appendChild(input);
+                    optionWrapper.appendChild(optionLabel);
+                    inputElement.appendChild(optionWrapper);
+                });
+            } else if (field.type === "radio") {
+                inputElement = document.createElement("div");
+                (_b = field.options) === null || _b === void 0 || _b.forEach((option)=>{
+                    const optionWrapper = document.createElement("div");
+                    const input = document.createElement("input");
+                    input.type = "radio";
+                    input.name = field.id; // Group by field ID
+                    input.value = option;
+                    input.addEventListener("change", $ca89da83071998c6$var$handleInputChange);
+                    const optionLabel = document.createElement("label");
+                    optionLabel.textContent = option;
+                    optionWrapper.appendChild(input);
+                    optionWrapper.appendChild(optionLabel);
+                    inputElement.appendChild(optionWrapper);
+                });
+            } else if (field.type === "dropdown") {
+                inputElement = document.createElement("select");
+                inputElement.id = field.id;
+                (_c = field.options) === null || _c === void 0 || _c.forEach((option)=>{
+                    const optionElement = document.createElement("option");
+                    optionElement.value = option;
+                    optionElement.textContent = option;
+                    inputElement.appendChild(optionElement);
+                });
+                inputElement.addEventListener("change", $ca89da83071998c6$var$handleInputChange);
+            } else if (field.type === "date") {
+                inputElement = document.createElement("input");
+                inputElement.type = "date";
+                inputElement.addEventListener("input", $ca89da83071998c6$var$handleInputChange);
+            } else {
+                inputElement = document.createElement("input");
+                inputElement.type = "text";
+                inputElement.addEventListener("input", $ca89da83071998c6$var$handleInputChange);
+            }
+            inputElement.id = field.id;
+            inputElement.className = "form-input";
+            if (field.type === "checkbox" || field.type === "radio") inputElement.className = "checkbox";
+            fieldWrapper.appendChild(inputElement);
+            formElement.appendChild(fieldWrapper);
+        });
+        // Submit Button
+        const submitButton = document.createElement("button");
+        submitButton.textContent = "Submit";
+        submitButton.type = "button";
+        submitButton.addEventListener("click", ()=>$ca89da83071998c6$var$submitFormResponse(form.id));
+        formElement.appendChild(submitButton);
+    }
+    $ca89da83071998c6$var$previewContainer.appendChild(formElement);
+    $ca89da83071998c6$var$formPreviewSection.style.display = "block";
+};
+// Submit Form Response
+const $ca89da83071998c6$var$submitFormResponse = (formId)=>{
+    const responses = $ca89da83071998c6$var$getResponsesFromStorage();
+    responses.push({
+        formId: formId,
+        responses: $ca89da83071998c6$var$currentFormResponse
+    });
+    $ca89da83071998c6$var$saveResponsesToStorage(responses);
+    alert("Form submitted successfully!");
+    $ca89da83071998c6$var$backToFormBuilder();
+};
+// Render Submitted Responses
+const $ca89da83071998c6$var$renderResponses = ()=>{
+    $ca89da83071998c6$var$responseContainer.innerHTML = "";
+    const responses = $ca89da83071998c6$var$getResponsesFromStorage();
+    const forms = $ca89da83071998c6$var$getFormsFromStorage();
+    if (responses.length === 0) {
+        alert("No responses found for this form.");
+        return;
+    }
+    $ca89da83071998c6$var$responseContainer.innerHTML = `<h3>Responses</h3>`;
+    responses.forEach((response, index)=>{
+        const form = forms.find((f)=>f.id === response.formId);
+        if (!form) return;
+        const responseElement = document.createElement("div");
+        responseElement.className = "response";
+        const title = document.createElement("h3");
+        title.textContent = `Responses for Form: ${form.name}`;
+        responseElement.appendChild(title);
+        Object.keys(response.responses).forEach((fieldId)=>{
+            const value = response.responses[fieldId];
+            const field = form.fields.find((f)=>f.id === fieldId);
+            if (!field) return;
+            const responseRow = document.createElement("div");
+            responseRow.className = "response-row";
+            responseRow.innerHTML = `<strong>${field.label}:</strong> ${value}`;
+            responseElement.appendChild(responseRow);
+        });
+        $ca89da83071998c6$var$responseContainer.appendChild(responseElement);
+    });
+};
+// View responses for a form
+const $ca89da83071998c6$var$viewResponses = (formId)=>{
+    const allResponses = $ca89da83071998c6$var$getResponsesFromStorage();
+    const forms = $ca89da83071998c6$var$getFormsFromStorage();
+    const responses = allResponses.filter((response)=>response.formId === formId);
+    const form = forms.find((f)=>f.id === formId);
+    if (!form) return;
+    if (responses.length === 0) {
+        alert("No responses found for this form.");
+        return;
+    }
+    $ca89da83071998c6$var$previewContainer.innerHTML = `<h3>Responses</h3>`;
+    responses.forEach((response, index)=>{
+        const responseDiv = document.createElement("div");
+        responseDiv.className = "response";
+        const responseHeader = document.createElement("h4");
+        responseHeader.textContent = `Response ${index + 1}`;
+        responseDiv.appendChild(responseHeader);
+        Object.keys(response.responses).forEach((fieldId)=>{
+            const fieldDiv = document.createElement("div");
+            const answer = response.responses[fieldId];
+            const field = form.fields.find((f)=>f.id === fieldId);
+            if (!field) return;
+            fieldDiv.textContent = `${field.label}: ${Array.isArray(answer) ? answer.join(", ") : answer}`;
+            responseDiv.appendChild(fieldDiv);
+        });
+        $ca89da83071998c6$var$previewContainer.appendChild(responseDiv);
+    });
+    $ca89da83071998c6$var$formPreviewSection.style.display = "block";
+};
 
 
 //# sourceMappingURL=app.js.map
